@@ -130,6 +130,8 @@ _http_archive_attrs = {
     "patch_cmds": attr.string_list(default = []),
     "workspace_file": attr.label(allow_single_file = True),
     "workspace_file_content": attr.string(),
+    "is_netrc_auth_enabled": attr.bool(mandatory = False, default = False),
+    "netrc_file_path": attr.string(),
 }
 
 http_archive = repository_rule(

@@ -176,6 +176,15 @@ function assert_files_same() {
   return 1
 }
 
+# Expects $1 as header name to extract, and $2 the file containing the header names and values of the request
+# in the following format:
+# <header>: <value>
+# <header>: <value>
+#   result - prints the header value
+function extract_header_value() {
+  echo $(cat $2 | grep $1 | cut -d':' -f2 | sed -e 's/^[[:space:]]*//')
+}
+
 function test_http_archive_zip() {
   http_archive_helper zip_up
 
@@ -194,6 +203,40 @@ EOF
     || echo "Expected build/run to succeed"
   kill_nc
   expect_log $what_does_the_fox_say
+}
+
+function test_http_archive_zip_with_netrc() {
+  http_archive_helper zip_up
+
+  # create .netrc file
+  local auth_token=auth_token
+  local netrc_path=$TEST_TMPDIR/.netrc
+  cat > $netrc_path <<EOF
+127.0.0.1 password $auth_token
+EOF
+
+  cat > WORKSPACE <<EOF
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+http_archive(
+    name = 'endangered',
+    url = 'http://127.0.0.1:$nc_port/$repo2_name',
+    sha256 = '$sha256',
+    type = 'zip',
+    is_netrc_auth_enabled = True,
+    netrc_file_path = '$netrc_path'
+)
+EOF
+
+  bazel run //zoo:breeding-program >& $TEST_log \
+    || echo "Expected build/run to succeed"
+
+  local actual_auth_token=$(extract_header_value Authorization $nc_log)
+
+  expect_log $what_does_the_fox_say
+
+  echo "actual_auth_token=$actual_auth_token   --- should be equal to '$auth_token'"
+  assert_not_equals "$actual_auth_token" ""
+  assert_equals $auth_token $actual_auth_token
 }
 
 function test_http_archive_tgz() {
