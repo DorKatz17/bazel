@@ -132,6 +132,11 @@ _http_archive_attrs = {
     "workspace_file_content": attr.string(),
     "is_netrc_auth_enabled": attr.bool(mandatory = False, default = False),
     "netrc_file_path": attr.string(),
+
+    # a map of domain pattern to authentication type
+    # currently supported authentication types:
+    #   'github' - .netrc file should have a 'password' property for this domain / pattern with the token value
+    "netrc_domain_auth_types": attr.string_dict(),
 }
 
 http_archive = repository_rule(

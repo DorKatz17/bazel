@@ -223,7 +223,10 @@ http_archive(
     sha256 = '$sha256',
     type = 'zip',
     is_netrc_auth_enabled = True,
-    netrc_file_path = '$netrc_path'
+    netrc_file_path = '$netrc_path',
+    netrc_domain_auth_types = {
+      "127.0.0.1": "github"
+    },
 )
 EOF
 
@@ -236,7 +239,7 @@ EOF
 
   echo "actual_auth_token=$actual_auth_token   --- should be equal to '$auth_token'"
   assert_not_equals "$actual_auth_token" ""
-  assert_equals $auth_token $actual_auth_token
+  assert_equals $actual_auth_token "token $auth_token"
 }
 
 function test_http_archive_tgz() {
