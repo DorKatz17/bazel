@@ -128,12 +128,22 @@ public class HttpDownloader {
       throw new RepositoryFunctionException(e, Transience.PERSISTENT);
     }
     try {
-      return download(urls, sha256, Optional.of(type), outputDirectory, eventHandler, clientEnv);
+      return download(urls, sha256, Optional.of(type), outputDirectory, eventHandler, clientEnv, null);
     } catch (IOException e) {
       throw new RepositoryFunctionException(e, Transience.TRANSIENT);
     }
   }
 
+
+
+  public Path download(List<URL> urls,
+                       String sha256,
+                       Optional<String> type,
+                       Path output,
+                       ExtendedEventHandler eventHandler,
+                       Map<String, String> clientEnv) throws IOException, InterruptedException {
+    return download(urls, sha256, type, output, eventHandler, clientEnv, Optional.absent());
+  }
   /**
    * Downloads file to disk and returns path.
    *
@@ -157,7 +167,8 @@ public class HttpDownloader {
       Optional<String> type,
       Path output,
       ExtendedEventHandler eventHandler,
-      Map<String, String> clientEnv)
+      Map<String, String> clientEnv,
+      Optional<Map<String, String>> authorization)
       throws IOException, InterruptedException {
     if (Thread.interrupted()) {
       throw new InterruptedException();
@@ -238,7 +249,7 @@ public class HttpDownloader {
         new ProgressInputStream.Factory(locale, clock, eventHandler);
     HttpStream.Factory httpStreamFactory = new HttpStream.Factory(progressInputStreamFactory);
     HttpConnectorMultiplexer multiplexer =
-        new HttpConnectorMultiplexer(eventHandler, connector, httpStreamFactory, clock, sleeper);
+        new HttpConnectorMultiplexer(eventHandler, connector, httpStreamFactory, clock, sleeper, authorization.orNull());
 
     // Connect to the best mirror and download the file, while reporting progress to the CLI.
     semaphore.acquire();

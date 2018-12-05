@@ -26,6 +26,8 @@ import com.google.devtools.build.lib.syntax.EvalException;
 import com.google.devtools.build.lib.syntax.SkylarkDict;
 import com.google.devtools.build.lib.syntax.SkylarkList;
 
+import java.util.Map;
+
 /** Skylark API for the repository_rule's context. */
 @SkylarkModule(
     name = "repository_ctx",
@@ -361,8 +363,30 @@ public interface SkylarkRepositoryContextApi<RepositoryFunctionExceptionT extend
                     + " archive. Instead of needing to specify this prefix over and over in the"
                     + " <code>build_file</code>, this field can be used to strip it from extracted"
                     + " files."),
+        @Param(
+            name = "is_netrc_auth_enabled",
+            type = Boolean.class,
+            defaultValue = "false",
+            named = true,
+            doc = "a flag for enable using netrc files"
+        ),
+        @Param(
+            name = "netrc_file_path",
+            type = String.class,
+            defaultValue = "''",
+            named = true,
+            doc = "path for the netrc file"
+          ),
+        @Param(
+            name = "netrc_domain_auth_types",
+            type = Map.class,
+            defaultValue = "''",
+            named = true,
+            doc = "the authorization type which is the host in netrc file for now support \"github\""
+        )
       })
   public StructApi downloadAndExtract(
-      Object url, Object output, String sha256, String type, String stripPrefix, Location location)
+      Object url, Object output, String sha256, String type, String stripPrefix, Boolean is_netrc_auth_enabled,
+      String netrc_file_path, Map<String, String> netrc_domain_auth_types, Location location)
       throws RepositoryFunctionExceptionT, InterruptedException, EvalException;
 }

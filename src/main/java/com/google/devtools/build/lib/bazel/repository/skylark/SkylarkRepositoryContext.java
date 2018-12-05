@@ -25,8 +25,10 @@ import com.google.devtools.build.lib.bazel.repository.DecompressorDescriptor;
 import com.google.devtools.build.lib.bazel.repository.DecompressorValue;
 import com.google.devtools.build.lib.bazel.repository.cache.RepositoryCache;
 import com.google.devtools.build.lib.bazel.repository.cache.RepositoryCache.KeyType;
+import com.google.devtools.build.lib.bazel.repository.downloader.AuthorizationDispacher;
 import com.google.devtools.build.lib.bazel.repository.downloader.HttpDownloader;
 import com.google.devtools.build.lib.bazel.repository.downloader.HttpUtils;
+import com.google.devtools.build.lib.bazel.repository.downloader.NetrcCredentialsProvider;
 import com.google.devtools.build.lib.cmdline.Label;
 import com.google.devtools.build.lib.events.ExtendedEventHandler.FetchProgress;
 import com.google.devtools.build.lib.events.Location;
@@ -54,13 +56,16 @@ import com.google.devtools.build.lib.vfs.Symlinks;
 import com.google.devtools.build.skyframe.SkyFunction.Environment;
 import com.google.devtools.build.skyframe.SkyFunctionException.Transience;
 import com.google.devtools.build.skyframe.SkyKey;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -406,8 +411,9 @@ public class SkylarkRepositoryContext
 
   @Override
   public StructImpl downloadAndExtract(
-      Object url, Object output, String sha256, String type, String stripPrefix, Location location)
-      throws RepositoryFunctionException, InterruptedException, EvalException {
+      Object url, Object output, String sha256, String type, String stripPrefix,
+         Boolean isNetrc, String netrcPath, Map<String, String> domainToAuth , Location location)
+          throws RepositoryFunctionException, InterruptedException, EvalException {
     validateSha256(sha256);
     List<URL> urls = getUrls(url);
 
@@ -429,6 +435,7 @@ public class SkylarkRepositoryContext
 
     Path downloadedPath;
     try {
+      Map<String, String> hostToAuth = isNetrc ? createAuthHeaders(netrcPath, domainToAuth) : null;
       downloadedPath =
           httpDownloader.download(
               urls,
@@ -436,7 +443,8 @@ public class SkylarkRepositoryContext
               Optional.of(type),
               outputPath.getPath(),
               env.getListener(),
-              osObject.getEnvironmentVariables());
+              osObject.getEnvironmentVariables(),
+              Optional.of(hostToAuth));
     } catch (InterruptedException e) {
       throw new RepositoryFunctionException(
           new IOException("thread interrupted"), Transience.TRANSIENT);
@@ -472,6 +480,17 @@ public class SkylarkRepositoryContext
     }
     SkylarkDict<String, Object> dict = SkylarkDict.of(null, "sha256", finalSha256);
     return StructProvider.STRUCT.createStruct(dict, null);
+  }
+
+  private Map<String, String> createAuthHeaders(String netrcPath, Map<String, String> domainToAuth){
+      Map<String, String> hostToToken = new HashMap<String, String>(domainToAuth.size());
+      NetrcCredentialsProvider netrcCredentialsProvider = NetrcCredentialsProvider.getInstance(Paths.get(netrcPath));
+      domainToAuth.entrySet()
+                  .stream()
+                  .forEach(entry -> hostToToken.put(entry.getKey(),
+                                                            new AuthorizationDispacher().attachAuthorization(entry.getValue(),
+                                                                                                             netrcCredentialsProvider.getCredentials(entry.getKey()))));
+      return hostToToken;
   }
 
   private String calculateSha256(String originalSha, Path path) throws IOException {
