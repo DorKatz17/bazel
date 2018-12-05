@@ -212,7 +212,7 @@ function test_http_archive_zip_with_netrc() {
   local auth_token=auth_token
   local netrc_path=$TEST_TMPDIR/.netrc
   cat > $netrc_path <<EOF
-127.0.0.1 password $auth_token
+machine 127.0.0.1 password $auth_token
 EOF
 
   cat > WORKSPACE <<EOF

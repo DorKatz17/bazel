@@ -444,7 +444,7 @@ public class SkylarkRepositoryContext
               outputPath.getPath(),
               env.getListener(),
               osObject.getEnvironmentVariables(),
-              Optional.of(hostToAuth));
+              Optional.fromNullable(hostToAuth));
     } catch (InterruptedException e) {
       throw new RepositoryFunctionException(
           new IOException("thread interrupted"), Transience.TRANSIENT);
@@ -483,14 +483,15 @@ public class SkylarkRepositoryContext
   }
 
   private Map<String, String> createAuthHeaders(String netrcPath, Map<String, String> domainToAuth){
-      Map<String, String> hostToToken = new HashMap<String, String>(domainToAuth.size());
+      Map<String, String> hostToToken = new HashMap<>(domainToAuth.size());
       NetrcCredentialsProvider netrcCredentialsProvider = NetrcCredentialsProvider.getInstance(Paths.get(netrcPath));
       domainToAuth.entrySet()
                   .forEach(entry -> {
-                    if (netrcCredentialsProvider.getCredentials(entry.getValue()).isPresent())
-                    hostToToken.put(entry.getKey(),
-                                    new AuthorizationHeaderProvider().getAuthorizationHeaderValue(entry.getValue(),
-                                                                                                  netrcCredentialsProvider.getCredentials(entry.getValue()).get()));
+                    if (netrcCredentialsProvider.getCredentials(entry.getKey()).isPresent()) {
+                      hostToToken.put(entry.getKey(),
+                              new AuthorizationHeaderProvider().getAuthorizationHeaderValue(entry.getValue(),
+                                      netrcCredentialsProvider.getCredentials(entry.getKey()).get()));
+                    }
                   });
       return hostToToken;
   }

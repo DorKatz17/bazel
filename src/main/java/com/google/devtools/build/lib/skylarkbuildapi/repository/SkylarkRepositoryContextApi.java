@@ -379,7 +379,7 @@ public interface SkylarkRepositoryContextApi<RepositoryFunctionExceptionT extend
           ),
         @Param(
             name = "netrc_domain_auth_types",
-            type = Map.class,
+            type = SkylarkDict.class,
             defaultValue = "''",
             named = true,
             doc = "the authorization type which is the host in netrc file for now support \"github\""
