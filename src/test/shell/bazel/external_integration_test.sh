@@ -182,7 +182,7 @@ function assert_files_same() {
 # <header>: <value>
 #   result - prints the header value
 function extract_header_value() {
-  echo $(cat $2 | grep $1 | cut -d':' -f2 | sed -e 's/^[[:space:]]*//')
+  echo $(cat $2 | grep $1 | cut -d':' -f2 | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 }
 
 function test_http_archive_zip() {
@@ -206,8 +206,6 @@ EOF
 }
 
 function test_http_archive_zip_with_netrc() {
-  http_archive_helper zip_up
-
   # create .netrc file
   local auth_token=auth_token
   local netrc_path=$TEST_TMPDIR/.netrc
@@ -215,12 +213,46 @@ function test_http_archive_zip_with_netrc() {
 machine 127.0.0.1 password $auth_token
 EOF
 
+  local repo_with_auth=$TEST_TMPDIR/repo_with_auth
+  rm -rf $repo_with_auth
+
+  mkdir -p $repo_with_auth/cat
+  cd $repo_with_auth
+  touch WORKSPACE
+  touch cat/male
+  cat > cat/BUILD <<EOF
+filegroup(
+    name = "cat",
+    srcs = ["male"],
+    visibility = ["//visibility:public"],
+)
+EOF
+
+  local what_does_the_cat_say="Myau-myau"
+
+  cat > cat/male <<EOF
+#!/bin/sh
+echo $what_does_the_cat_say
+EOF
+
+  chmod +x cat/male
+
+  local repo_with_auth_zip=$TEST_TMPDIR/auth.zip
+  zip -0 -ry $repo_with_auth_zip WORKSPACE cat
+
+  local repo_with_auth_sha256=$(sha256sum $repo_with_auth_zip | cut -f 1 -d ' ')
+
+  serve_file $repo_with_auth_zip
+
+  local repo_with_auth_name=$(basename $repo_with_auth_zip)
+  cd ${WORKSPACE_DIR}
+
   cat > WORKSPACE <<EOF
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 http_archive(
     name = 'endangered',
-    url = 'http://127.0.0.1:$nc_port/$repo2_name',
-    sha256 = '$sha256',
+    url = 'http://127.0.0.1:$nc_port/$repo_with_auth_name',
+    sha256 = '$repo_with_auth_sha256',
     type = 'zip',
     is_netrc_auth_enabled = True,
     netrc_file_path = '$netrc_path',
@@ -230,16 +262,32 @@ http_archive(
 )
 EOF
 
+  cat > zoo/BUILD <<EOF
+sh_binary(
+    name = "breeding-program",
+    srcs = ["female.sh"],
+    data = ["@endangered//cat"],
+)
+EOF
+
+    cat > zoo/female.sh <<EOF
+#!/bin/sh
+../endangered/cat/male
+EOF
+  chmod +x zoo/female.sh
+
   bazel run //zoo:breeding-program >& $TEST_log \
     || echo "Expected build/run to succeed"
 
   local actual_auth_token=$(extract_header_value Authorization $nc_log)
 
-  expect_log $what_does_the_fox_say
+  kill_nc
 
-  echo "actual_auth_token=$actual_auth_token   --- should be equal to '$auth_token'"
+  expect_log $what_does_the_cat_say
+
+  echo "actual_auth_token=$actual_auth_token   --- should be equal to 'token $auth_token'"
   assert_not_equals "$actual_auth_token" ""
-  assert_equals $actual_auth_token "token $auth_token"
+  assert_equals "$actual_auth_token" "token $auth_token"
 }
 
 function test_http_archive_tgz() {
