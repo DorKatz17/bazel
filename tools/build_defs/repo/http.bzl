@@ -51,6 +51,9 @@ def _http_archive_impl(ctx):
         ctx.attr.sha256,
         ctx.attr.type,
         ctx.attr.strip_prefix,
+        ctx.attr.is_netrc_auth_enabled,
+        ctx.attr.netrc_file_path,
+        ctx.attr.netrc_domain_auth_types
     )
     patch(ctx)
     workspace_and_buildfile(ctx)
