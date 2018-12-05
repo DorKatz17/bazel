@@ -38,7 +38,7 @@ public class NetrcCredentialsProviderTest {
 
     @Test
     public void getCredentials_ReturnsCredentialsWithEmptyUserAndPasswordWhenMachineFoundButWithoutLoginAndPassword() {
-        givenNetrcFileWith(toNetrcRowWihMachine(HOST));
+        givenNetrcFileWith(NETRC_FILE_PATH, toNetrcRowWihMachine(HOST));
 
         CredentialsProvider credentialsProvider = new NetrcCredentialsProvider(NETRC_FILE_PATH);
 
@@ -48,7 +48,7 @@ public class NetrcCredentialsProviderTest {
 
     @Test
     public void getCredentials_ReturnsCredentialsWithUserAndEmptyPasswordWhenMachineFoundWithLoginButWithoutPassword() {
-        givenNetrcFileWith(toNetrcRowWithMachineAndLogin(HOST, LOGIN));
+        givenNetrcFileWith(NETRC_FILE_PATH, toNetrcRowWithMachineAndLogin(HOST, LOGIN));
 
         CredentialsProvider credentialsProvider = new NetrcCredentialsProvider(NETRC_FILE_PATH);
 
@@ -58,7 +58,7 @@ public class NetrcCredentialsProviderTest {
 
     @Test
     public void getCredentials_ReturnsCredentialsWithPasswordAndEmptyUserWhenMachineFoundWithPasswordButWithoutLogin() {
-        givenNetrcFileWith(toNetrcRowWithMachineAndPassword(HOST, PASS));
+        givenNetrcFileWith(NETRC_FILE_PATH, toNetrcRowWithMachineAndPassword(HOST, PASS));
 
         CredentialsProvider credentialsProvider = new NetrcCredentialsProvider(NETRC_FILE_PATH);
 
@@ -68,7 +68,7 @@ public class NetrcCredentialsProviderTest {
 
     @Test
     public void getCredentials_ReturnsCredentialsWithUserAndPassword() {
-        givenNetrcFileWith(toNetrcRow(HOST, LOGIN, PASS));
+        givenNetrcFileWith(NETRC_FILE_PATH, toNetrcRow(HOST, LOGIN, PASS));
 
         CredentialsProvider credentialsProvider = new NetrcCredentialsProvider(NETRC_FILE_PATH);
 
@@ -78,7 +78,7 @@ public class NetrcCredentialsProviderTest {
 
     @Test
     public void getCredentials_ReturnsCredentialsForSubDomain() {
-        givenNetrcFileWith(toNetrcRow(HOST, LOGIN, PASS));
+        givenNetrcFileWith(NETRC_FILE_PATH, toNetrcRow(HOST, LOGIN, PASS));
 
         CredentialsProvider credentialsProvider = new NetrcCredentialsProvider(NETRC_FILE_PATH);
 
@@ -88,7 +88,7 @@ public class NetrcCredentialsProviderTest {
 
     @Test
     public void getCredentials_ReturnsCredentialsForFirstMatchOfMachine() {
-        givenNetrcFileWith(
+        givenNetrcFileWith(NETRC_FILE_PATH,
                 toNetrcRow(HOST, LOGIN, PASS),
                 toNetrcRow(SUBDOMAIN, LOGIN2, PASS2)
         );
@@ -101,7 +101,7 @@ public class NetrcCredentialsProviderTest {
 
     @Test
     public void getCredentials_FindsHostInTheMiddle() {
-        givenNetrcFileWith(
+        givenNetrcFileWith(NETRC_FILE_PATH,
                 toNetrcRowWithNewLinesAndTabs(HOST, LOGIN, PASS),
                 toNetrcRow(HOST2, LOGIN2, PASS2),
                 toNetrcRow(HOST3, LOGIN3, PASS3)
@@ -115,7 +115,7 @@ public class NetrcCredentialsProviderTest {
 
     @Test
     public void getCredentials_SupportsDefinitionsWithNewLines() {
-        givenNetrcFileWith(toNetrcRowWithNewLinesAndTabs(HOST, LOGIN, PASS));
+        givenNetrcFileWith(NETRC_FILE_PATH, toNetrcRowWithNewLinesAndTabs(HOST, LOGIN, PASS));
 
         CredentialsProvider credentialsProvider = new NetrcCredentialsProvider(NETRC_FILE_PATH);
 
@@ -125,7 +125,7 @@ public class NetrcCredentialsProviderTest {
 
     @Test
     public void getCredentials_ReturnEmptyResultWhenHostIsNotFound() {
-        givenNetrcFileWith(
+        givenNetrcFileWith(NETRC_FILE_PATH,
                 toNetrcRow(HOST, LOGIN, PASS),
                 toNetrcRow(HOST2, LOGIN2, PASS2)
         );
@@ -136,10 +136,66 @@ public class NetrcCredentialsProviderTest {
         Assert.assertEquals(Optional.empty(), actual);
     }
 
+    @Test
+    public void getCredentials_CachingNetrcFileContentAfterFirstRead() {
+        givenNetrcFileWith(NETRC_FILE_PATH, toNetrcRow(HOST, LOGIN, PASS));
+
+        CredentialsProvider credentialsProvider = new NetrcCredentialsProvider(NETRC_FILE_PATH);
+
+        Optional<Credentials> actual = credentialsProvider.getCredentials(HOST);
+        Assert.assertEquals(Optional.of(new Credentials(LOGIN, PASS)), actual);
+
+        deleteFile(NETRC_FILE_PATH);
+        givenNetrcFileWith(NETRC_FILE_PATH, toNetrcRow(HOST2, LOGIN2, PASS2));
+
+        Optional<Credentials> actualCached = credentialsProvider.getCredentials(HOST);
+        Assert.assertEquals(Optional.of(new Credentials(LOGIN, PASS)), actualCached);
+    }
+
+    @Test
+    public void getInstance_ReturnsTheSameObjectForSamePath() {
+        givenNetrcFileWith(NETRC_FILE_PATH, toNetrcRow(HOST, LOGIN, PASS));
+
+        CredentialsProvider credentialsProvider = NetrcCredentialsProvider.getInstance(NETRC_FILE_PATH);
+
+        Optional<Credentials> actual = credentialsProvider.getCredentials(HOST);
+        Assert.assertEquals(Optional.of(new Credentials(LOGIN, PASS)), actual);
+
+        // now the contents of netrc are cached within the object
+        // we will create a new netrc file, and test that it is not read again, when getting the instance again
+        // via getInstance with the same path
+        deleteFile(NETRC_FILE_PATH);
+        givenNetrcFileWith(NETRC_FILE_PATH, toNetrcRow(HOST2, LOGIN2, PASS2));
+
+        CredentialsProvider credentialsProviderAgain = NetrcCredentialsProvider.getInstance(NETRC_FILE_PATH);
+        Optional<Credentials> actualCached = credentialsProviderAgain.getCredentials(HOST);
+        Assert.assertEquals(Optional.of(new Credentials(LOGIN, PASS)), actualCached);
+    }
+
+    @Test
+    public void getInstance_ReturnsDifferentObjectsForDifferentPaths() {
+        givenNetrcFileWith(NETRC_FILE_PATH, toNetrcRow(HOST, LOGIN, PASS));
+        givenNetrcFileWith(NETRC_FILE_PATH2, toNetrcRow(HOST2, LOGIN2, PASS2));
+
+        CredentialsProvider credentialsProvider = NetrcCredentialsProvider.getInstance(NETRC_FILE_PATH);
+
+        Optional<Credentials> actual = credentialsProvider.getCredentials(HOST);
+        Assert.assertEquals(Optional.of(new Credentials(LOGIN, PASS)), actual);
+
+        CredentialsProvider credentialsProviderAgain = NetrcCredentialsProvider.getInstance(NETRC_FILE_PATH2);
+        Optional<Credentials> actualCached = credentialsProviderAgain.getCredentials(HOST2);
+        Assert.assertEquals(Optional.of(new Credentials(LOGIN2, PASS2)), actualCached);
+    }
+
     @After
     public void afterEach() {
+        deleteFile(NETRC_FILE_PATH);
+        deleteFile(NETRC_FILE_PATH2);
+    }
+
+    private void deleteFile(Path path) {
         try {
-            Files.delete(NETRC_FILE_PATH);
+            Files.delete(path);
         } catch (NoSuchFileException e) {
             // do nothing
         } catch (IOException e) {
@@ -156,13 +212,13 @@ public class NetrcCredentialsProviderTest {
         }
     }
 
-    private void givenNetrcFileWith(String... netrcRows) {
+    private void givenNetrcFileWith(Path netrcFilePath, String... netrcRows) {
         StringBuilder fileContent = new StringBuilder();
         for (String row : netrcRows) {
             fileContent.append(row).append(System.lineSeparator());
         }
         try {
-            Files.write(NETRC_FILE_PATH,fileContent.toString().getBytes(Charset.forName("UTF-8")));
+            Files.write(netrcFilePath, fileContent.toString().getBytes(Charset.forName("UTF-8")));
         } catch (IOException e) {
             Assert.fail("could not create .netrc file");
         }
@@ -195,6 +251,7 @@ public class NetrcCredentialsProviderTest {
     }
 
     private static final Path NETRC_FILE_PATH = Paths.get("./.netrc");
+    private static final Path NETRC_FILE_PATH2 = Paths.get("./.netrc2");
     private static final String HOST = "some.host" + UUID.randomUUID().toString();
     private static final String HOST2 = "some.host2" + UUID.randomUUID().toString();
     private static final String HOST3 = "some.host3" + UUID.randomUUID().toString();
