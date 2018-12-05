@@ -11,7 +11,7 @@ public class AuthorizationHeaderProvider {
         TYPE_TO_PROTOCOL.put("github", new GithubAuthorizationProtocol());
     }
 
-    public String getAuthorizationHeaderValue(String host, CredentialsProvider.Credentials credentials){
-        return TYPE_TO_PROTOCOL.getOrDefault(host, new DefaultAuthorizationProtocol()).getAuthProtocol(credentials);
+    public String getAuthorizationHeaderValue(String type, CredentialsProvider.Credentials credentials){
+        return TYPE_TO_PROTOCOL.getOrDefault(type, new DefaultAuthorizationProtocol()).getAuthProtocol(credentials);
     }
 }

@@ -31,6 +31,6 @@ import org.junit.runners.Suite.SuiteClasses;
   ProxyHelperTest.class,
   RetryingInputStreamTest.class,
   NetrcCredentialsProviderTest.class,
-  AuthorizationDispacherTest.class
+  AuthorizationHeaderProviderTest.class
 })
 public class DownloaderTestSuite {}

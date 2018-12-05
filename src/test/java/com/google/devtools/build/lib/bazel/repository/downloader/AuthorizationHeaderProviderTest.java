@@ -4,7 +4,7 @@ import org.junit.Test;
 
 import static com.google.common.truth.Truth.assertThat;
 
-public class AuthorizationDispacherTest {
+public class AuthorizationHeaderProviderTest {
 
     AuthorizationHeaderProvider authorizationHeaderProvider = new AuthorizationHeaderProvider();
 
