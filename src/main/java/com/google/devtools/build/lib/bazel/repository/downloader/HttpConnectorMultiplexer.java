@@ -75,10 +75,10 @@ final class HttpConnectorMultiplexer {
   private final HttpStream.Factory httpStreamFactory;
   private final Clock clock;
   private final Sleeper sleeper;
-  private final Map<String, String> authorization;
+  private final Map<String, String> authorizationHeaders;
 
   /**
-   * Creates a new instance with authorization.
+   * Creates a new instance with authorizationHeaders.
    *
    * <p>Instances are thread safe and can be reused.
    */
@@ -88,17 +88,17 @@ final class HttpConnectorMultiplexer {
       HttpStream.Factory httpStreamFactory,
       Clock clock,
       Sleeper sleeper,
-      Map<String, String> authorization) {
+      Map<String, String> authorizationHeaders) {
     this.eventHandler = eventHandler;
     this.connector = connector;
     this.httpStreamFactory = httpStreamFactory;
     this.clock = clock;
     this.sleeper = sleeper;
-    this.authorization = authorization;
+    this.authorizationHeaders = authorizationHeaders;
   }
 
   /**
-   * Creates a new instance without authorization.
+   * Creates a new instance without authorizationHeaders.
    *
    * <p>Instances are thread safe and can be reused.
    */
@@ -337,11 +337,10 @@ final class HttpConnectorMultiplexer {
   }
   // need to use regex
   private ImmutableMap<String, String> headersWithAuth(URL url) {
-    if (authorization != null) {
-      if(authorization.keySet().stream().anyMatch(host -> url.getHost().equals(host))){
-        AuthorizationDispacher authorizationDispacher = new AuthorizationDispacher();
+    if (authorizationHeaders != null) {
+      if(authorizationHeaders.keySet().stream().anyMatch(host -> url.getHost().equals(host))){
         return new ImmutableMap.Builder<String, String>().putAll(REQUEST_HEADERS)
-                                                         .put("Authorization", authorization.get(url.getHost())).build();
+                                                         .put("Authorization", authorizationHeaders.get(url.getHost())).build();
       }
     }
     return REQUEST_HEADERS;

@@ -25,7 +25,7 @@ import com.google.devtools.build.lib.bazel.repository.DecompressorDescriptor;
 import com.google.devtools.build.lib.bazel.repository.DecompressorValue;
 import com.google.devtools.build.lib.bazel.repository.cache.RepositoryCache;
 import com.google.devtools.build.lib.bazel.repository.cache.RepositoryCache.KeyType;
-import com.google.devtools.build.lib.bazel.repository.downloader.AuthorizationDispacher;
+import com.google.devtools.build.lib.bazel.repository.downloader.AuthorizationHeaderProvider;
 import com.google.devtools.build.lib.bazel.repository.downloader.HttpDownloader;
 import com.google.devtools.build.lib.bazel.repository.downloader.HttpUtils;
 import com.google.devtools.build.lib.bazel.repository.downloader.NetrcCredentialsProvider;
@@ -412,7 +412,7 @@ public class SkylarkRepositoryContext
   @Override
   public StructImpl downloadAndExtract(
       Object url, Object output, String sha256, String type, String stripPrefix,
-         Boolean isNetrc, String netrcPath, Map<String, String> domainToAuth , Location location)
+         Boolean shouldUseNetrcAuth, String netrcPath, Map<String, String> domainToAuth , Location location)
           throws RepositoryFunctionException, InterruptedException, EvalException {
     validateSha256(sha256);
     List<URL> urls = getUrls(url);
@@ -435,7 +435,7 @@ public class SkylarkRepositoryContext
 
     Path downloadedPath;
     try {
-      Map<String, String> hostToAuth = isNetrc ? createAuthHeaders(netrcPath, domainToAuth) : null;
+      Map<String, String> hostToAuth = shouldUseNetrcAuth ? createAuthHeaders(netrcPath, domainToAuth) : null;
       downloadedPath =
           httpDownloader.download(
               urls,
@@ -486,10 +486,12 @@ public class SkylarkRepositoryContext
       Map<String, String> hostToToken = new HashMap<String, String>(domainToAuth.size());
       NetrcCredentialsProvider netrcCredentialsProvider = NetrcCredentialsProvider.getInstance(Paths.get(netrcPath));
       domainToAuth.entrySet()
-                  .stream()
-                  .forEach(entry -> hostToToken.put(entry.getKey(),
-                                                            new AuthorizationDispacher().attachAuthorization(entry.getValue(),
-                                                                                                             netrcCredentialsProvider.getCredentials(entry.getKey()))));
+                  .forEach(entry -> {
+                    if (netrcCredentialsProvider.getCredentials(entry.getValue()).isPresent())
+                    hostToToken.put(entry.getKey(),
+                                    new AuthorizationHeaderProvider().getAuthorizationHeaderValue(entry.getValue(),
+                                                                                                  netrcCredentialsProvider.getCredentials(entry.getValue()).get()));
+                  });
       return hostToToken;
   }
 
