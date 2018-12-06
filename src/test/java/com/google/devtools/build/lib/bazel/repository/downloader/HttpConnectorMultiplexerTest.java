@@ -101,6 +101,7 @@ public class HttpConnectorMultiplexerTest {
     when(connector.connect(eq(URL1), any(ImmutableMap.class))).thenReturn(connection1);
     when(connector.connect(eq(URL2), any(ImmutableMap.class))).thenReturn(connection2);
     when(connector.connect(eq(URL3), any(ImmutableMap.class))).thenReturn(connection3);
+    when(connector.connect(eq(URL4), any(ImmutableMap.class))).thenReturn(connection4);
     when(streamFactory
             .create(same(connection1), any(URL.class), anyString(), any(Reconnector.class)))
         .thenReturn(stream1);
