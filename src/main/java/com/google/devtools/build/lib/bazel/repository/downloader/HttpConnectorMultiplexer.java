@@ -335,7 +335,6 @@ final class HttpConnectorMultiplexer {
           }
         });
   }
-  // need to use regex
   private ImmutableMap<String, String> headersWithAuth(URL url) {
     if (authorizationHeaders != null) {
       if(authorizationHeaders.keySet().stream().anyMatch(host -> url.getHost().equals(host))){
