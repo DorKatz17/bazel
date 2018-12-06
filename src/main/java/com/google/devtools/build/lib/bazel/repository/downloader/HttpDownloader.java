@@ -142,7 +142,7 @@ public class HttpDownloader {
                        Path output,
                        ExtendedEventHandler eventHandler,
                        Map<String, String> clientEnv) throws IOException, InterruptedException {
-    return download(urls, sha256, type, output, eventHandler, clientEnv, Optional.absent());
+    return download(urls, sha256, type, output, eventHandler, clientEnv, null);
   }
   /**
    * Downloads file to disk and returns path.
@@ -168,7 +168,7 @@ public class HttpDownloader {
       Path output,
       ExtendedEventHandler eventHandler,
       Map<String, String> clientEnv,
-      Optional<Map<String, String>> authorization)
+      Map<String, String> authorization)
       throws IOException, InterruptedException {
     if (Thread.interrupted()) {
       throw new InterruptedException();
@@ -249,7 +249,7 @@ public class HttpDownloader {
         new ProgressInputStream.Factory(locale, clock, eventHandler);
     HttpStream.Factory httpStreamFactory = new HttpStream.Factory(progressInputStreamFactory);
     HttpConnectorMultiplexer multiplexer =
-        new HttpConnectorMultiplexer(eventHandler, connector, httpStreamFactory, clock, sleeper, authorization.orNull());
+        new HttpConnectorMultiplexer(eventHandler, connector, httpStreamFactory, clock, sleeper, authorization);
 
     // Connect to the best mirror and download the file, while reporting progress to the CLI.
     semaphore.acquire();

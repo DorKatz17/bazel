@@ -444,7 +444,7 @@ public class SkylarkRepositoryContext
               outputPath.getPath(),
               env.getListener(),
               osObject.getEnvironmentVariables(),
-              Optional.fromNullable(hostToAuth));
+              hostToAuth);
     } catch (InterruptedException e) {
       throw new RepositoryFunctionException(
           new IOException("thread interrupted"), Transience.TRANSIENT);
