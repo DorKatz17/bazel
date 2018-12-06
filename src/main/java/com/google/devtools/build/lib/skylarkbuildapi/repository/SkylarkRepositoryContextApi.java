@@ -373,7 +373,7 @@ public interface SkylarkRepositoryContextApi<RepositoryFunctionExceptionT extend
         @Param(
             name = "netrc_file_path",
             type = String.class,
-            defaultValue = "''",
+            defaultValue = "/",
             named = true,
             doc = "path for the netrc file"
           ),
